@@ -1,16 +1,24 @@
 import pytest
+import tempfile
+import os
 from app import app
-from database.db import init_db
+from database.db import init_db, seed_db
 
 @pytest.fixture
 def client():
     app.config["TESTING"] = True
-    app.config["DATABASE"] = ":memory:" # Or a temporary test database
+    # Use a temporary file database for testing (SQLite :memory: is per-connection)
+    db_fd, db_path = tempfile.mkstemp()
+    app.config["DATABASE"] = db_path
 
     with app.test_client() as client:
         with app.app_context():
-            init_db() # Seed with test data
+            init_db()
+            seed_db()
         yield client
+
+    os.close(db_fd)
+    os.unlink(db_path)
 
 def test_landing(client):
     rv = client.get('/')
