@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — Spendly{% endblock %}
+
+{% block content %}
+
+<section class="profile-section">
+    <div class="profile-container">
+
+        <!-- Header -->
+        <div class="profile-header">
+            <h1 class="profile-title">Welcome back, {{ user_name }}</h1>
+            <p class="profile-subtitle">Here's your spending overview</p>
+        </div>
+
+        <!-- Total Spending Card -->
+        <div class="stats-grid">
+            <div class="stat-card stat-primary">
+                <div class="stat-icon">💰</div>
+                <div class="stat-content">
+                    <div class="stat-label">Total Spending</div>
+                    <div class="stat-value">₹{{ "{:,.2f}".format(total_spending) }}</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <div class="stat-content">
+                    <div class="stat-label">Categories Used</div>
+                    <div class="stat-value">{{ category_totals|length }}</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">🧾</div>
+                <div class="stat-content">
+                    <div class="stat-label">Total Expenses</div>
+                    <div class="stat-value">{{ recent_expenses|length + (expenses|length if expenses is defined else 0) }}</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">➕</div>
+                <a href="{{ url_for('add_expense') }}" class="stat-content stat-link">
+                    <div class="stat-label">Add Expense</div>
+                    <div class="stat-value">New</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Category Breakdown & Monthly Trend -->
+        <div class="dashboard-grid">
+
+            <!-- Category Breakdown -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h2 class="card-title">Spending by Category</h2>
+                </div>
+                <div class="card-body">
+                    {% if category_totals %}
+                    <div class="category-list">
+                        {% for cat_name, data in category_totals.items() %}
+                        <div class="category-item">
+                            <div class="category-info">
+                                <span class="category-icon" style="color: {{ data.color }}">{{ data.icon }}</span>
+                                <span class="category-name">{{ cat_name }}</span>
+                            </div>
+                            <div class="category-amount">₹{{ "{:,.2f}".format(data.total) }}</div>
+                            <div class="category-bar">
+                                <div class="category-bar-fill" style="width: {{ (data.total / total_spending * 100) if total_spending > 0 else 0 }}%; background: {{ data.color }}"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="empty-state">No expenses yet. <a href="{{ url_for('add_expense') }}">Add your first expense</a></p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Monthly Trend -->
+            <div class="dashboard-card">
+                <div class="card-header">
+                    <h2 class="card-title">Monthly Trend (Last 6 Months)</h2>
+                </div>
+                <div class="card-body">
+                    {% if month_totals %}
+                    <div class="month-list">
+                        {% for month_key, data in month_totals.items() %}
+                        <div class="month-item">
+                            <div class="month-info">
+                                <span class="month-name">{{ data.name }}</span>
+                            </div>
+                            <div class="month-amount">₹{{ "{:,.2f}".format(data.total) }}</div>
+                            <div class="month-bar">
+                                {% set max_month = month_totals.values()|map(attribute='total')|max if month_totals.values()|map(attribute='total')|list else 0 %}
+                                <div class="month-bar-fill" style="width: {{ (data.total / max_month * 100) if max_month > 0 else 0 }}%; background: var(--accent)"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="empty-state">No data available</p>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Recent Expenses -->
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h2 class="card-title">Recent Expenses</h2>
+                <a href="{{ url_for('add_expense') }}" class="btn-primary btn-sm">Add Expense</a>
+            </div>
+            <div class="card-body">
+                {% if recent_expenses %}
+                <div class="expense-table-container">
+                    <table class="expense-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Category</th>
+                                <th>Description</th>
+                                <th>Amount</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for expense in recent_expenses %}
+                            <tr>
+                                <td>{{ expense.date }}</td>
+                                <td>
+                                    <span class="category-badge" style="background: {{ expense.category_color }}20; color: {{ expense.category_color }}">
+                                        {{ expense.category_icon }} {{ expense.category_name }}
+                                    </span>
+                                </td>
+                                <td>{{ expense.description or '—' }}</td>
+                                <td class="expense-amount">₹{{ "{:,.2f}".format(expense.amount) }}</td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <a href="{{ url_for('edit_expense', id=expense.id) }}" class="btn-icon" title="Edit">✏️</a>
+                                        <form method="POST" action="{{ url_for('delete_expense', id=expense.id) }}" style="display: inline;">
+                                            <button type="submit" class="btn-icon btn-delete" title="Delete" onclick="return confirm('Delete this expense?')">🗑️</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="empty-state">No expenses yet. <a href="{{ url_for('add_expense') }}">Add your first expense</a></p>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+</section>
+
+{% endblock %}
